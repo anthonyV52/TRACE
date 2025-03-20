@@ -3,6 +3,7 @@
     let results: any[] = [];
     let tables: string[] = [];
     let features: string[] = [];
+    let executedQuery: string = ""; // New variable to store the executed query
 
     async function openConnection() {
         await fetch("http://localhost:8000/open_connection", { method: "POST" });
@@ -24,7 +25,19 @@
     }
 
     async function executeQuery() {
-        await fetch("http://localhost:8000/execute_query", { method: "POST" });
+        // Send the query to the backend for execution
+        await fetch("http://localhost:8000/execute_query", { 
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query })
+        });
+        
+        // Store the query in the `executedQuery` variable to display it on the UI
+        executedQuery = query;
+        
+        // Fetch the results after executing the query
+        await fetchResults();
+        
         alert("Query executed!");
     }
 
@@ -61,6 +74,9 @@
 <button on:click={initializeQuery}>Initialize Query</button>
 <button on:click={executeQuery}>Execute Query</button>
 <button on:click={fetchResults}>Get Results</button>
+
+<h2>Executed Query</h2>
+<p>{executedQuery}</p> <!-- Display the query that was executed -->
 
 <h2>Results</h2>
 <ul>
