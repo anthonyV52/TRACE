@@ -1,21 +1,18 @@
 import sqlite3
-from typing import List, Optional, Tuple, Any
-from fastapi import FastAPI
-
-app = FastAPI()
+from typing import List, Optional
 
 class DBEnumerator:
     def __init__(self, db_path: str):
         """
         Initializes the DBEnumerator with a database path.
-        Ensures the connection is closed initially.
+        @ensures The connection is closed initially.
         """
         self.db_path = db_path
         self.connection: Optional[sqlite3.Connection] = None
         self.cursor: Optional[sqlite3.Cursor] = None
         self.query: Optional[str] = None
         self.tables: List[str] = []
-
+    @app.post("/open-connection")
     def open_connection(self):
         """Opens a connection to the database."""
         if not self.connection:
@@ -24,7 +21,7 @@ class DBEnumerator:
                 self.cursor = self.connection.cursor()
             except sqlite3.Error as e:
                 print(f"Error opening database: {e}")
-
+    @app.post("/close-connection")
     def close_connection(self):
         """Closes the database connection."""
         if self.connection:
@@ -35,10 +32,11 @@ class DBEnumerator:
             finally:
                 self.connection = None
                 self.cursor = None
-
+    @app.post("/execute-query")
     def execute_query(self, query: str, params: Tuple[Any, ...] = ()):
         """
         Executes a given SQL query (INSERT, UPDATE, DELETE).
+        Use `fetch_results` for SELECT queries.
         """
         if not self.connection:
             self.open_connection()
@@ -48,6 +46,7 @@ class DBEnumerator:
         except sqlite3.Error as e:
             print(f"Error executing query: {e}")
 
+    @app.post("/fetch-results")
     def fetch_results(self, query: str, params: Tuple[Any, ...] = ()) -> List[Tuple[Any]]:
         """
         Executes a SELECT query and fetches all results.
@@ -93,41 +92,7 @@ class DBEnumerator:
             raise Exception("Table is not stored in the enumerator.")
         if not self.connection:
             raise Exception("Database connection must be open.")
+
         self.cursor.execute(f"PRAGMA table_info({table_name})")
         columns = [row[1] for row in self.cursor.fetchall()]
         return columns
-
-# FastAPI Routes
-db_enumerator = DBEnumerator("your_database.db")
-
-@app.post("/open_connection")
-def open_connection():
-    db_enumerator.open_connection()
-
-@app.post("/close_connection")
-def close_connection():
-    db_enumerator.close_connection()
-
-@app.post("/initialize_enumeration")
-def initialize_enumeration(query: str):
-    db_enumerator.initialize_enumeration(query)
-
-@app.post("/execute_query")
-def execute_query(query: str):
-    db_enumerator.execute_query(query)
-
-@app.get("/get_query_results")
-def get_query_results():
-    return db_enumerator.fetch_results(db_enumerator.query)
-
-@app.post("/store_table")
-def store_table(table_name: str):
-    db_enumerator.store_table(table_name)
-
-@app.get("/get_table_names")
-def get_table_names():
-    return db_enumerator.get_table_names()
-
-@app.get("/get_table_features")
-def get_table_features(table_name: str):
-    return {"features": db_enumerator.get_table_features(table_name)}
