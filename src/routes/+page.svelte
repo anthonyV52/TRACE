@@ -80,6 +80,9 @@
     {#if message}
       <p>{message}</p>
     {/if}
+    <div>
+      <a href="/project">Visit Project Page</a>
+    </div>
   </main>
   
   <style>
