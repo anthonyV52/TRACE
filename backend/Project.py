@@ -21,7 +21,7 @@ class Project(BaseModel):
 projects_db = {}
 users_db = {}
 
-# ✅ New Request Model for Creating a Project
+# New Request Model for Creating a Project
 class ProjectCreateRequest(BaseModel):
     name: str
     owner_id: int
