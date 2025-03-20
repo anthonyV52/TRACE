@@ -66,7 +66,6 @@
         <p>Password Strength: {passwordStrength}/5</p>
       {/if}
     </div>
-  
     <div>
       <h2>Username</h2>
       <input type="text" bind:value={username} placeholder="Enter username" />
@@ -80,10 +79,12 @@
     {#if message}
       <p>{message}</p>
     {/if}
-    <div>
-      <a href="/project">Visit Project Page</a>
-    </div>
   </main>
+
+  <div>
+    <a href="/project">Visit Project Page</a>
+    <a href="/database">Visit Db_enumerator Page</a>
+  </div>
   
   <style>
     main {
