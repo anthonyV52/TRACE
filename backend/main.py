@@ -8,7 +8,7 @@ from Credentials import app as credentials_app
 # Create the main FastAPI app
 app = FastAPI()
 
-# ✅ Mount Project and Credentials APIs
+#  Mount Project and Credentials APIs
 app.mount("/project", project_app)
 app.mount("/credentials", credentials_app)
 
