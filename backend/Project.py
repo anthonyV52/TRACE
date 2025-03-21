@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
+from fastapi import APIRouter, FastAPI, HTTPException, UploadFile, File, Depends, Query
 from pydantic import BaseModel
 from neo4j_service import create_project_node, create_user_node, link_owner_to_project
 import os
@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
+router = APIRouter()
 
 # Define User and Project models first
 
@@ -42,7 +43,7 @@ def get_all_projects():
 
 
 # 🔹 New Endpoint: Create a Project
-@app.post("/create")
+@router.post("/create")
 def create_project(request: ProjectCreateRequest):
     new_project_id = max(projects_db.keys(), default=0) + 1
     new_project = Project(id=new_project_id, name=request.name, owner_id=request.owner_id, locked=False)

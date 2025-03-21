@@ -25,6 +25,7 @@
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
+		"cors": "^2.8.5",
 		"neo4j-driver": "^5.28.1"
 	}
 }

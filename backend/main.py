@@ -1,27 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Project import app as project_app  # ✅ lowercase if your file is named project.py
+from Project import router as project_router  # ✅ we're importing the router now
 
 app = FastAPI()
 
-# ✅ Enable CORS for the entire FastAPI application
+# CORS middleware for local frontend dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # or ["*"] for testing only
+    allow_origins=["http://localhost:5173"],  # Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Mount the project app at /project
-app.mount("/project", project_app)
+# ✅ Include the project router with a prefix
+app.include_router(project_router, prefix="/project")
 
-# ✅ Optional root route to confirm API is running
 @app.get("/")
 def root():
     return {"message": "Main FastAPI app is live!"}
 
-# ✅ Only runs if you execute this file directly
+# Optional, only needed if you want to run with `python main.py`
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
