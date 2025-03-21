@@ -1,162 +1,58 @@
 <script>
-    let password = "";
-    let username = "";
-    let passwordStrength = null;
-    let usernameStrength = null;
-    let message = "";
-
-    // ✅ Updated API base URL to correctly point to `/credentials`
-    const apiUrl = "http://127.0.0.1:8000/credentials";
-
-    // ✅ Store Password API call
-    async function storePassword() {
-        try {
-            const res = await fetch(`${apiUrl}/store-password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ value: password })
-            });
-
-            const data = await res.json();
-            console.log("Store Password Response:", data);
-
-            if (res.ok) {
-                message = data.message || "Password stored successfully.";
-            } else {
-                message = data.detail || "Error storing password.";
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            message = "Failed to connect to server.";
-        }
-    }
-
-    // ✅ Store Username API call
-    async function storeUsername() {
-        try {
-            const res = await fetch(`${apiUrl}/store-username`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ value: username })
-            });
-
-            const data = await res.json();
-            console.log("Store Username Response:", data);
-
-            if (res.ok) {
-                message = data.message || "Username stored successfully.";
-            } else {
-                message = data.detail || "Error storing username.";
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            message = "Failed to connect to server.";
-        }
-    }
-
-    // ✅ Check Password Strength API call
-    async function checkPasswordStrength() {
-        try {
-            const res = await fetch(`${apiUrl}/password-strength`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ value: password })
-            });
-
-            const data = await res.json();
-            console.log("Password Strength Response:", data);
-
-            if (res.ok) {
-                passwordStrength = data.strength ?? "Unknown";
-            } else {
-                passwordStrength = "Error";
-                message = data.detail || "Error checking password strength.";
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            passwordStrength = "Error";
-            message = "Failed to connect to server.";
-        }
-    }
-
-    // ✅ Check Username Strength API call
-    async function checkUsernameStrength() {
-        try {
-            const res = await fetch(`${apiUrl}/username-strength`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ value: username })
-            });
-
-            const data = await res.json();
-            console.log("Username Strength Response:", data);
-
-            if (res.ok) {
-                usernameStrength = data.strength ?? "Unknown";
-            } else {
-                usernameStrength = "Error";
-                message = data.detail || "Error checking username strength.";
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            usernameStrength = "Error";
-            message = "Failed to connect to server.";
-        }
-    }
+  let projectDetails = "This is the trace subsystem 3 portion of the porject and a simple launch page";
+  function goToNextPage() {
+    window.location.href = "/project"; // Replace with your actual route
+  }
 </script>
+<style>
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 
-<main>
-    <h1>FastAPI + Svelte</h1>
+  .details {
+    text-align: center;
+    max-width: 600px;
+    font-size: 1.25rem;
+    padding: 2rem;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  }
 
-    <div>
-        <h2>Password</h2>
-        <input type="password" bind:value={password} placeholder="Enter password" />
-        <button on:click={storePassword}>Store Password</button>
-        <button on:click={checkPasswordStrength}>Check Strength</button>
-        {#if passwordStrength !== null}
-            <p>Password Strength: {passwordStrength}/5</p>
-        {/if}
-    </div>
+  .start-button {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #00ffff;
+    color: #000;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    transition: all 0.3s ease;
+  }
 
-    <div>
-        <h2>Username</h2>
-        <input type="text" bind:value={username} placeholder="Enter username" />
-        <button on:click={storeUsername}>Store Username</button>
-        <button on:click={checkUsernameStrength}>Check Strength</button>
-        {#if usernameStrength !== null}
-            <p>Username Strength: {usernameStrength}/5</p>
-        {/if}
-    </div>
+  .start-button:hover {
+    background-color: #00cccc;
+    box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff;
+  }
+</style>
 
-    {#if message}
-        <p>{message}</p>
-    {/if}
-</main>
-
-<div>
-    <a href="/project">Visit Project Page</a>
-    <a href="/database">Visit Db_enumerator Page</a>
+<div class="details">
+  <h1>Elevate your security strategy with TRACE</h1>
+  <p>{projectDetails}</p>
 </div>
 
-<style>
-    main {
-        font-family: Arial, sans-serif;
-        max-width: 400px;
-        margin: auto;
-        padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    input {
-        display: block;
-        width: 100%;
-        padding: 8px;
-        margin: 5px 0;
-    }
-    button {
-        margin: 5px;
-        padding: 8px 12px;
-        cursor: pointer;
-    }
-</style>
+<button class="start-button" on:click={goToNextPage}>Start</button>

@@ -1,95 +1,96 @@
-<script lang="ts">
-    import { onMount } from "svelte";
-
+<script>
+    import { onMount } from 'svelte';
+  
     let name = "";
-    let owner = "";
-    let format = "csv";
-    let filename = "";
-    
-    // Explicitly define project type
-    let projects: { name: string; owner: string; archived: boolean }[] = [];
-
+    let owner_id = "";
+    let message = "";
+  
     async function createProject() {
-        await fetch("http://localhost:8000/create_project", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, owner })
+      try {
+        const response = await fetch("http://localhost:8000/project/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name,
+            owner_id: parseInt(owner_id)
+          })
         });
-        alert("Project created!");
-        loadProjects();
+  
+        const result = await response.json();
+  
+        if (response.ok) {
+          message = `✅ ${result.message} (ID: ${result.project_id})`;
+        } else {
+          message = `❌ ${result.detail || 'Error creating project'}`;
+        }
+      } catch (err) {
+      if (err instanceof Error) {
+        message = `❌ ${err.message}`;
+      } else {
+        message = `❌ An unknown error occurred.`;
+      }
     }
-
-    async function deleteProject(projectName: string) {
-        await fetch("http://localhost:8000/delete_project", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: projectName, owner })
-        });
-        alert("Project deleted!");
-        loadProjects();
     }
-
-    async function importProject() {
-        await fetch("http://localhost:8000/import_project", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename, owner })
-        });
-        alert("Project imported!");
-        loadProjects();
+  </script>
+  
+  <style>
+    .form-container {
+      max-width: 400px;
+      margin: 5rem auto;
+      padding: 2rem;
+      background-color: #1f2937;
+      color: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
     }
-
-    async function exportProject(projectName: string) {
-        let res = await fetch("http://localhost:8000/export_project", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: projectName, format, owner })
-        });
-        let data = await res.json();
-        alert(`Exported file: ${data.exported_file}`);
+  
+    label, input {
+      display: block;
+      width: 100%;
+      margin-bottom: 1rem;
     }
-
-    async function archiveProject(projectName: string) {
-        await fetch("http://localhost:8000/archive_project", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: projectName, owner })
-        });
-        alert("Project archived!");
-        loadProjects();
+  
+    input {
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: none;
+      background-color: #374151;
+      color: white;
     }
-
-    async function loadProjects() {
-        let res = await fetch(`http://localhost:8000/display_projects/${owner}`);
-        let data = await res.json();
-        projects = data.projects || [];
+  
+    button {
+      background-color: #00ffff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 1rem;
+      cursor: pointer;
+      color: #000;
+      margin-top: 1rem;
     }
-
-    onMount(() => {
-        loadProjects();
-    });
-</script>
-
-<h1>Project Manager</h1>
-
-<h2>Create a Project</h2>
-<input type="text" bind:value={name} placeholder="Project Name" />
-<input type="text" bind:value={owner} placeholder="Owner Name" />
-<button on:click={createProject}>Create</button>
-
-<h2>Import a Project</h2>
-<input type="text" bind:value={filename} placeholder="File Name (.csv or .xml)" />
-<button on:click={importProject}>Import</button>
-
-<h2>Your Projects</h2>
-<button on:click={loadProjects}>Refresh Projects</button>
-<ul>
-    {#each projects as project}
-        <li>
-            {project.name} {project.archived ? "(Archived)" : ""}
-            <button on:click={() => deleteProject(project.name)}>Delete</button>
-            <button on:click={() => exportProject(project.name)}>Export</button>
-            <button on:click={() => archiveProject(project.name)}>Archive</button>
-        </li>
-    {/each}
-</ul>
+  
+    .message {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+  </style>
+  
+  <div class="form-container">
+    <h2>Create a New Project</h2>
+    <label>
+      Project Name:
+      <input type="text" bind:value={name} placeholder="Enter project name" />
+    </label>
+    <label>
+      Owner ID:
+      <input type="number" bind:value={owner_id} placeholder="Enter owner ID" />
+    </label>
+    <button on:click={createProject}>Create Project</button>
+  
+    {#if message}
+      <div class="message">{message}</div>
+    {/if}
+  </div>
+  
