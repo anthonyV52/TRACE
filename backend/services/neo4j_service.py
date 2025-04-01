@@ -14,6 +14,19 @@ class Project(BaseModel):
     owner_id: int
     locked: bool = False
 
+def get_all_projects():
+    with driver.session() as session:
+        result = session.run("MATCH (p:Project) RETURN p")
+        return [
+            {
+                "id": record["p"]["id"],
+                "name": record["p"]["name"],
+                "owner_id": record["p"]["owner_id"],
+                "locked": record["p"].get("locked", False)
+            }
+            for record in result
+        ]
+
 def create_user_node(user_id: int, name: str):
     with driver.session() as session:
         session.run("MERGE (u:User {id: $id}) SET u.name = $name", id=user_id, name=name)
