@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from models.ProjectManager import ProjectManager
 from typing import Optional, List, Tuple
+from neo4j_driver import get_driver
+
 
 router = APIRouter()
 
@@ -69,3 +71,16 @@ def read_ip_list(name: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
     return {"IPList": project.IPList}
+
+# "this is a test for the neo4j"
+@router.get("/neo4j/people")
+def get_people():
+    driver = get_driver()
+    query = "MATCH (p:Person) RETURN p.name AS name, p.age AS age"
+    try:
+        with driver.session() as session:
+            result = session.run(query)
+            people = [{"name": record["name"], "age": record["age"]} for record in result]
+        return {"people": people}
+    except Exception as e:
+        return {"error": str(e)}
