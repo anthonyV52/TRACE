@@ -20,20 +20,13 @@ class projectManager(project):
         if project and requester == project.owner:
             self.project_store = [p for p in self.project_store if p != project]
     
-    async def import_project(self, requester: str, file: UploadFile = File(...)):
-        if not file.filename.endswith(".json"):
-            return None
-        
-        content = await file.read()
-
-        try:
-            data = json.loads(content)
-            validated_project = ProjectImportSchema(**data)
-        except Exception as e:
-            return None
-
-        return validated_project
-
+    def import_project(self, data: str, requester: str) -> Optional[project]:
+        if requester and data.lower().endswith((".csv", ".xml")):
+            project_name = os.path.splitext(os.path.basename(data))[0]
+            new_project = project(project_name, requester)
+            self.project_store.append(new_project)
+            return new_project
+        return None
     
     def export_project(self, project: project, format: str, requester: str) -> Optional[str]:
         if project and requester and format.lower() in ("csv", "xml"):
