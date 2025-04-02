@@ -12,23 +12,53 @@ class DBEnumerator:
         self.cursor: Optional[sqlite3.Cursor] = None
         self.query: Optional[str] = None
         self.tables: List[str] = []
-
+    @app.post("/open-connection")
     def open_connection(self):
         """Opens a connection to the database."""
         if not self.connection:
-            self.connection = sqlite3.connect(self.db_path)
-            self.cursor = self.connection.cursor()
-        else:
-            print("Connection is already open.")
-
+            try:
+                self.connection = sqlite3.connect(self.db_path)
+                self.cursor = self.connection.cursor()
+            except sqlite3.Error as e:
+                print(f"Error opening database: {e}")
+    @app.post("/close-connection")
     def close_connection(self):
         """Closes the database connection."""
         if self.connection:
-            self.connection.close()
-            self.connection = None
-            self.cursor = None
-        else:
-            print("No open connection to close.")
+            try:
+                self.connection.close()
+            except sqlite3.Error as e:
+                print(f"Error closing database: {e}")
+            finally:
+                self.connection = None
+                self.cursor = None
+    @app.post("/execute-query")
+    def execute_query(self, query: str, params: Tuple[Any, ...] = ()):
+        """
+        Executes a given SQL query (INSERT, UPDATE, DELETE).
+        Use `fetch_results` for SELECT queries.
+        """
+        if not self.connection:
+            self.open_connection()
+        try:
+            self.cursor.execute(query, params)
+            self.connection.commit()
+        except sqlite3.Error as e:
+            print(f"Error executing query: {e}")
+
+    @app.post("/fetch-results")
+    def fetch_results(self, query: str, params: Tuple[Any, ...] = ()) -> List[Tuple[Any]]:
+        """
+        Executes a SELECT query and fetches all results.
+        """
+        if not self.connection:
+            self.open_connection()
+        try:
+            self.cursor.execute(query, params)
+            return self.cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"Error fetching results: {e}")
+            return []
 
     def is_connection_open(self) -> bool:
         """Checks if the database connection is open."""
@@ -37,13 +67,6 @@ class DBEnumerator:
     def initialize_enumeration(self, query: str):
         """Stores the SQL query for execution."""
         self.query = query
-
-    def execute_query(self):
-        """Executes the stored query and stores the results."""
-        if not self.connection or not self.query:
-            raise Exception("Database connection must be open and query must be initialized.")
-        self.cursor.execute(self.query)
-        self.results = self.cursor.fetchall()
 
     def get_query_results(self) -> List[str]:
         """Returns the results of the last executed query."""
