@@ -1,29 +1,86 @@
 <script lang="ts">
-  let name: string = "";
-  let owner_id: string = "";
-  let message: string = "";
+  import { onMount } from "svelte";
+  import "$lib/styles/trace.css";
+  import { goto } from "$app/navigation";
 
-  interface Project {
-    id: number;
-    name: string;
-    owner_id: number;
+  let name: string = "";
+  let user_id: string = "";
+  let message: string = "";
+  let projects: { id: number; name: string; owner_id: number }[] = [];
+  let showDialog = false;
+  let adminMode = false;
+  let allowedUsers: { id: number; name: string }[] = [];
+
+  // Admin-only new user fields
+  let newUserId = "";
+  let newUserName = "";
+
+  function setUser() {
+    const parsedId = parseInt(user_id);
+    const trimmedName = name.trim();
+
+    if (!trimmedName || isNaN(parsedId)) {
+      message = "❌ Please enter both a valid User ID and Name.";
+      return;
+    }
+
+    const found = allowedUsers.find(
+      (u) => u.id === parsedId && u.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (!found) {
+      message = "❌ User not recognized. Please contact an admin.";
+      return;
+    }
+
+    if (parsedId === 1 && !adminMode) {
+      const token = prompt("Enter admin token:");
+      if (token === "supersecret") {
+        adminMode = true;
+        message = `✅ Logged in as ${name} (Admin ID: ${user_id})`;
+      } else {
+        message = "❌ Invalid admin token.";
+        return;
+      }
+    } else {
+      message = `✅ Logged in as ${name} (ID: ${user_id})`;
+    }
   }
 
-  let projects: Project[] = [];
-  let showDialog: boolean = false;
+  function addUser() {
+    const id = parseInt(newUserId);
+    const trimmedName = newUserName.trim();
 
-  
+    if (!trimmedName || isNaN(id)) {
+      message = "❌ Please enter a valid new user ID and name.";
+      return;
+    }
+
+    if (allowedUsers.some((u) => u.id === id)) {
+      message = "❌ That User ID is already taken.";
+      return;
+    }
+
+    allowedUsers.push({ id, name: trimmedName });
+    message = `✅ Added user "${trimmedName}" with ID ${id}`;
+    newUserId = "";
+    newUserName = "";
+  }
 
   async function createProject() {
+    const parsedId = parseInt(user_id);
+    if (!name.trim() || isNaN(parsedId)) {
+      message = "❌ Please enter a valid project name and user ID.";
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:8000/project/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          owner_id: parseInt(owner_id)
+          name: name.trim(),
+          owner_id: parsedId
         })
       });
 
@@ -31,179 +88,115 @@
 
       if (response.ok) {
         message = `✅ ${result.message} (ID: ${result.project_id})`;
-        projects.push({ id: result.project_id, name, owner_id: parseInt(owner_id) });
+        projects.push({ id: result.project_id, name, owner_id: parsedId });
         showDialog = false;
         name = "";
-        owner_id = "";
       } else {
         message = `❌ ${result.detail || 'Error creating project'}`;
       }
-    } catch (err) {
-      if (err instanceof Error) {
-        message = `❌ ${err.message}`;
-      } else {
-        message = `❌ An unknown error occurred.`;
+    } catch {
+      message = `❌ Failed to connect to server.`;
+    }
+  }
+
+  async function openProject(project_id: number) {
+    const parsedId = parseInt(user_id);
+    if (!parsedId || isNaN(parsedId)) {
+      message = "❌ Please set a valid User ID before opening a project.";
+      return;
+    }
+
+    goto(`/project/${project_id}?requester_id=${parsedId}`);
+  }
+
+  async function loadProjects() {
+    try {
+      const response = await fetch("http://localhost:8000/project");
+      const result = await response.json();
+      if (Array.isArray(result)) {
+        projects = result;
       }
+    } catch (err) {
+      console.error("Error fetching projects:", err);
     }
   }
 
   function exportProjects() {
-    const dataStr = JSON.stringify(projects, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "projects.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const dataStr = JSON.stringify(projects, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "projects.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-  function importProjects(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+function importProjects(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importedData = JSON.parse(e.target?.result as string);
-        if (Array.isArray(importedData)) {
-          projects = importedData;
-          message = "✅ Projects imported successfully!";
-        } else {
-          message = "❌ Invalid file format.";
-        }
-      } catch (e) {
-        message = "❌ Failed to parse JSON.";
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const importedData = JSON.parse(e.target?.result as string);
+      if (Array.isArray(importedData)) {
+        projects = importedData;
+        message = "✅ Projects imported successfully!";
+      } else {
+        message = "❌ Invalid file format.";
       }
-    };
-    reader.readAsText(file);
-  }
+    } catch {
+      message = "❌ Failed to parse JSON.";
+    }
+  };
+  reader.readAsText(file);
+}
+
+  onMount(() => {
+    loadProjects();
+
+    // Preload a few allowed users (admin + test users)
+    allowedUsers = [
+      { id: 1, name: "Admin" },
+      { id: 2, name: "Alice" },
+      { id: 3, name: "Bob" }
+    ];
+  });
 </script>
 
-<style>
-  .container {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    padding: 2rem;
-    color: #fff;
-    background-color: #111827;
-    min-height: 100vh;
-  }
-
-  .header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #304e70;
-    padding: 2rem 2rem;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-  }
-
-  .header-bar h1 {
-    font-size: 2rem;
-    margin: 0;
-  }
-
-
-  .nav-buttons a {
-    text-decoration: none;
-  }
-
-  .nav-buttons button {
-    background-color: #00ffff;
-    color: #000;
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 1rem;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .projects-section,
-  .create-section,
-  .export-section,
-  .import-section {
-    background-color: #1f2937;
-    padding: 1.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-  }
-
-  .form-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  input[type="text"],
-  input[type="number"] {
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    border: none;
-    background-color: #374151;
-    color: white;
-  }
-
-  button {
-    background-color: #00ffff;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 1rem;
-    cursor: pointer;
-    color: #000;
-  }
-
-  .file-upload-container {
-    position: relative;
-    display: inline-block;
-    margin-top: 1rem;
-  }
-
-  .file-upload-label {
-    background-color: #00ffff;
-    color: #000;
-    padding: 0.75rem 1.5rem;
-    border-radius: 1rem;
-    cursor: pointer;
-    display: inline-block;
-  }
-
-  input[type="file"] {
-    display: none;
-  }
-
-  .message {
-    margin-top: 1rem;
-    font-weight: bold;
-  }
-
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .modal-content {
-    background-color: #1f2937;
-    padding: 2rem;
-    border-radius: 1rem;
-    width: 90%;
-    max-width: 400px;
-  }
-</style>
-
 <div class="container">
-  <!-- ✅ Top Header with Nav Buttons -->
+  <div class="user-section">
+    <label>
+      User ID:
+      <input type="number" bind:value={user_id} placeholder="Enter User ID" />
+    </label>
+    <label>
+      Name:
+      <input type="text" bind:value={name} placeholder="Enter Name" />
+    </label>
+    <button on:click={setUser}>Set User</button>
+    {#if user_id && name}
+      <p>👤 Current User: <strong>{name} (ID: {user_id})</strong></p>
+    {/if}
+  </div>
+
+  {#if adminMode}
+    <div class="admin-section">
+      <h3>🔐 Admin Panel — Create New User</h3>
+      <label>
+        New User ID:
+        <input type="number" bind:value={newUserId} placeholder="ID" />
+      </label>
+      <label>
+        New User Name:
+        <input type="text" bind:value={newUserName} placeholder="Name" />
+      </label>
+      <button on:click={addUser}>➕ Add User</button>
+    </div>
+  {/if}
+
   <div class="header-bar">
     <h1>TRACE System</h1>
     <div class="nav-buttons">
@@ -213,7 +206,10 @@
     </div>
   </div>
 
-  <!-- ✅ Project List Section -->
+  {#if message}
+  <div class="message">{message}</div>
+  {/if}
+
   <div class="projects-section">
     <h2>📁 Projects</h2>
     {#if projects.length === 0}
@@ -221,25 +217,25 @@
     {:else}
       <ul>
         {#each projects as project}
-          <li>{project.name} (Owner ID: {project.owner_id})</li>
+          <li>
+            {project.name} (Owner ID: {project.owner_id})
+            <button on:click={() => openProject(project.id)}>Open</button>
+          </li>
         {/each}
       </ul>
     {/if}
   </div>
 
-  <!-- ✅ Create Project Section -->
   <div class="create-section">
     <h2>➕ Create New Project</h2>
     <button on:click={() => showDialog = true}>Create Project</button>
   </div>
 
-  <!-- ✅ Export Section -->
   <div class="export-section">
     <h2>⬇️ Export Projects</h2>
     <button on:click={exportProjects}>Download JSON</button>
   </div>
-
-  <!-- ✅ Import Section -->
+  
   <div class="import-section">
     <h2>⬆️ Import Projects</h2>
     <div class="file-upload-container">
@@ -249,33 +245,24 @@
       </label>
     </div>
   </div>
+  
 
-  <!-- ✅ Message -->
-  {#if message}
-    <div class="message">{message}</div>
-  {/if}
-</div>
-
-<!-- ✅ Modal Dialog -->
-{#if showDialog}
-  <div class="modal">
-    <div class="modal-content">
-      <h3>Create a New Project</h3>
-      <div class="form-container">
-        <label>
-          Project Name:
-          <input type="text" bind:value={name} placeholder="Enter project name" />
-        </label>
-        <label>
-          Owner ID:
-          <input type="number" bind:value={owner_id} placeholder="Enter owner ID" />
-        </label>
-        <button on:click={createProject}>Create</button>
-        <button on:click={() => showDialog = false}>Cancel</button>
-        {#if message}
-          <div class="message">{message}</div>
-        {/if}
+  {#if showDialog}
+    <div class="modal">
+      <div class="modal-content">
+        <h3>Create a New Project</h3>
+        <div class="form-container">
+          <label>
+            Project Name:
+            <input type="text" bind:value={name} placeholder="Enter project name" />
+          </label>
+          <button on:click={createProject}>Create</button>
+          <button on:click={() => showDialog = false}>Cancel</button>
+          {#if message}
+            <div class="message">{message}</div>
+          {/if}
+        </div>
       </div>
     </div>
-  </div>
-{/if}
+  {/if}
+</div>
