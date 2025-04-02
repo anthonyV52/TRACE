@@ -219,7 +219,17 @@
         reader.onload = (e) => {
           try {
             const importedData = JSON.parse(e.target?.result as string);
-            if (Array.isArray(importedData)) {
+
+            const isValid = (typeof importedData.name === "string" &&
+                             typeof importedData.id === "string" &&
+                             typeof importedData.owner === "string" &&
+                             typeof importedData.isLocked === "boolean" &&
+                             Array.isArray(importedData.files) &&
+                             importedData.IPList.every(ip => Array.isArray(ip) && ip.length === 2 && 
+                             typeof ip[0] === "string" && typeof ip[1] === "number")
+            )
+
+            if (isValid) {
               projects = importedData;
               message = "✅ Projects imported successfully!";
             } else {
