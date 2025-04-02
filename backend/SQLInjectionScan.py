@@ -25,7 +25,14 @@ class SQLInjectionScan:
                 return True
         return False
     
+    
     @staticmethod
     def detect_sql_vulnerabilities(logs: List[str]) -> List[str]:
         suspicious_queries = [log for log in logs if SQLInjectionScan.analyze_query(log)]
         return suspicious_queries
+
+    @staticmethod
+    def process_response(response: str) -> str:
+        if "error" in response.lower():
+            return "Possible SQL Injection Error Detected"
+        return "Response processed successfully"
