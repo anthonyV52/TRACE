@@ -1,53 +1,20 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from DbEnumerator import DBEnumerator
+from fastapi.middleware.cors import CORSMiddleware
+from routers import Project, User
 
 app = FastAPI()
-db = DBEnumerator("database.db")
 
-class QueryModel(BaseModel):
-    query: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class TableModel(BaseModel):
-    table_name: str
+app.include_router(Project.router)
+app.include_router(User.router)
 
-@app.post("/open_connection")
-def open_connection():
-    db.open_connection()
-    return {"message": "Connection opened"}
-
-@app.post("/close_connection")
-def close_connection():
-    db.close_connection()
-    return {"message": "Connection closed"}
-
-@app.get("/is_connection_open")
-def is_connection_open():
-    return {"is_open": db.is_connection_open()}
-
-@app.post("/initialize_enumeration")
-def initialize_enumeration(query: QueryModel):
-    db.initialize_enumeration(query.query)
-    return {"message": "Query initialized"}
-
-@app.post("/execute_query")
-def execute_query():
-    db.execute_query()
-    return {"message": "Query executed"}
-
-@app.get("/get_query_results")
-def get_query_results():
-    return {"results": db.get_query_results()}
-
-@app.post("/store_table")
-def store_table(table: TableModel):
-    db.store_table(table.table_name)
-    return {"message": f"Table {table.table_name} stored"}
-
-@app.get("/get_table_names")
-def get_table_names():
-    return {"tables": db.get_table_names()}
-
-@app.get("/get_table_features")
-def get_table_features(table_name: str):
-    return {"features": db.get_table_features(table_name)}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

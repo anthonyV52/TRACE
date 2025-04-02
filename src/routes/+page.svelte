@@ -1,111 +1,58 @@
 <script>
-    let password = "";
-    let username = "";
-    /**
-	 * @type {null}
-	 */
-    let passwordStrength = null;
-    /**
-	 * @type {null}
-	 */
-    let usernameStrength = null;
-    let message = "";
-  
-    const apiUrl = "http://127.0.0.1:8000";
-  
-    async function storePassword() {
-      const res = await fetch(`${apiUrl}/store-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: password }),
-      });
-      const data = await res.json();
-      message = data.message || data.detail;
-    }
-  
-    async function storeUsername() {
-      const res = await fetch(`${apiUrl}/store-username`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: username }),
-      });
-      const data = await res.json();
-      message = data.message || data.detail;
-    }
-  
-    async function checkPasswordStrength() {
-      const res = await fetch(`${apiUrl}/password-strength`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: password }),
-      });
-      const data = await res.json();
-      passwordStrength = data.strength || "Error";
-    }
-  
-    async function checkUsernameStrength() {
-      const res = await fetch(`${apiUrl}/username-strength`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: username }),
-      });
-      const data = await res.json();
-      usernameStrength = data.strength || "Error";
-    }
-  </script>
-  
-  <main>
-    <h1>FastAPI + Svelte</h1>
-  
-    <div>
-      <h2>Password</h2>
-      <input type="password" bind:value={password} placeholder="Enter password" />
-      <button on:click={storePassword}>Store Password</button>
-      <button on:click={checkPasswordStrength}>Check Strength</button>
-      {#if passwordStrength !== null}
-        <p>Password Strength: {passwordStrength}/5</p>
-      {/if}
-    </div>
-    <div>
-      <h2>Username</h2>
-      <input type="text" bind:value={username} placeholder="Enter username" />
-      <button on:click={storeUsername}>Store Username</button>
-      <button on:click={checkUsernameStrength}>Check Strength</button>
-      {#if usernameStrength !== null}
-        <p>Username Strength: {usernameStrength}/5</p>
-      {/if}
-    </div>
-  
-    {#if message}
-      <p>{message}</p>
-    {/if}
-  </main>
+  let projectDetails = "This is the trace subsystem 3 portion of the porject and a simple launch page";
+  function goToNextPage() {
+    window.location.href = "/project"; // Replace with your actual route
+  }
+</script>
+<style>
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 
-  <div>
-    <a href="/project">Visit Project Page</a>
-    <a href="/database">Visit Db_enumerator Page</a>
-  </div>
-  
-  <style>
-    main {
-      font-family: Arial, sans-serif;
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    input {
-      display: block;
-      width: 100%;
-      padding: 8px;
-      margin: 5px 0;
-    }
-    button {
-      margin: 5px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-  </style>
-  
+  .details {
+    text-align: center;
+    max-width: 600px;
+    font-size: 1.25rem;
+    padding: 2rem;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  }
+
+  .start-button {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #00ffff;
+    color: #000;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    transition: all 0.3s ease;
+  }
+
+  .start-button:hover {
+    background-color: #00cccc;
+    box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff;
+  }
+</style>
+
+<div class="details">
+  <h1>Elevate your security strategy with TRACE</h1>
+  <p>{projectDetails}</p>
+</div>
+
+<button class="start-button" on:click={goToNextPage}>Start</button>

@@ -4,6 +4,7 @@
     let tables: string[] = [];
     let features: string[] = [];
 
+
     async function openConnection() {
         await fetch("http://localhost:8000/open_connection", { method: "POST" });
         alert("Database connection opened!");
