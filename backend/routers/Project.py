@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from models.Project import Project
 from services.neo4j_service import create_project_node, get_all_projects  # Added get_all_projects
 from typing import List, Tuple
+from neo4j import GraphDatabase
 
 router = APIRouter()
 
@@ -73,3 +74,20 @@ def save_project(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
     return project.save_project()
+
+# this is a test for the neo4J
+# uri = "bolt://localhost:7687"
+# user = "neo4j"
+# password = "12345678"
+# driver = GraphDatabase.driver(uri, auth=(user, password))
+
+# @router.get("/neo4j-test")
+# def test_neo4j():
+#     try:
+#         with driver.session() as session:
+#             result = session.run("RETURN 'Neo4j connection successful!' AS message")
+#             message = result.single()["message"]
+#             return {"message": message}
+#     except Exception as e:
+#         return {"error": str(e)}
+
