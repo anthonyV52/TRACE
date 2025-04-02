@@ -176,6 +176,7 @@
       <a href="/"><button>🏠 Home</button></a>
       <a href="/database"><button>📊 Db Enumerator</button></a>
       <a href="/settings"><button>⚙️ Settings</button></a>
+      <a href="/sql-injection"><button>🧪 SQL Injection</button></a>
     </div>
   </div>
 
