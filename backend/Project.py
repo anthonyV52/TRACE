@@ -1,11 +1,22 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
+from fastapi import APIRouter, FastAPI, HTTPException, UploadFile, File, Depends, Query
 from pydantic import BaseModel
-import shutil
+from neo4j_service import create_project_node, create_user_node, link_owner_to_project
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+router = APIRouter()
 
 # Define User and Project models first
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 class User(BaseModel):
     id: int
     name: str
@@ -26,13 +37,24 @@ class ProjectCreateRequest(BaseModel):
     name: str
     owner_id: int
 
+@app.get("/project")  # ✅ Correct path
+def get_all_projects():
+    return list(projects_db.values())
+
+
 # 🔹 New Endpoint: Create a Project
-@app.post("/projects/create")
+@router.post("/create")
 def create_project(request: ProjectCreateRequest):
-    new_project_id = max(projects_db.keys(), default=0) + 1  # Auto-increment ID
+    new_project_id = max(projects_db.keys(), default=0) + 1
     new_project = Project(id=new_project_id, name=request.name, owner_id=request.owner_id, locked=False)
     
-    projects_db[new_project_id] = new_project  # Store the new project
+    projects_db[new_project_id] = new_project
+
+    # 💡 Neo4j Sync
+    owner_name = users_db.get(request.owner_id, {}).get("name", "Unknown")
+    create_user_node(request.owner_id, owner_name)
+    create_project_node(new_project)
+    link_owner_to_project(request.owner_id, new_project.id)
 
     return {"message": "Project created successfully", "project_id": new_project_id}
 

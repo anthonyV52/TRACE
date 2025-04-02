@@ -1,17 +1,20 @@
 from fastapi import FastAPI
-import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+from routers import Project, User
 
-# Import full FastAPI apps
-from Project import app as project_app
-from Credentials import app as credentials_app
-
-# Create the main FastAPI app
 app = FastAPI()
 
-#  Mount Project and Credentials APIs
-app.mount("/project", project_app)
-app.mount("/credentials", credentials_app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Run the server
+app.include_router(Project.router)
+app.include_router(User.router)
+
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

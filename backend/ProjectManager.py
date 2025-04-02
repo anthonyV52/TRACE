@@ -1,4 +1,4 @@
-from Project import Project
+from Project import project
 from typing import List, Dict, Optional
 import os
 
