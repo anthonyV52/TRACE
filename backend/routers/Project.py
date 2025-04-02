@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from models.Project import Project
-from services.neo4j_service import create_project_node, get_all_projects  # Added get_all_projects
+from services.neo4j_service import create_project_node, get_all_projects, get_project_node # Added get_all_projects
 from typing import List, Tuple
 
 router = APIRouter()
@@ -21,12 +21,13 @@ def create_project(project: Project):
     return {"success": True, "message": f"Project '{project.name}' created."}
 
 @router.get("/project/{project_id}")
-def get_project(project_id: str):
-    project = project_db.get(project_id)
-    if not project:
+def get_project(project_id: str, requester_id: int = 0):  # requester_id is optional
+    try:
+        project_data = get_project_node(project_id)
+        return { "project": project_data }
+    except Exception:
         raise HTTPException(status_code=404, detail="Project not found.")
-    return project
-
+    
 @router.put("/project/{project_id}/name")
 def update_project_name(project_id: str, new_name: str):
     project = project_db.get(project_id)

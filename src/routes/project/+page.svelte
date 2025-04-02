@@ -8,11 +8,7 @@
   let message: string = "";
   let projects: { id: string; name: string; owner: string; isLocked: boolean; files: string[] }[] = [];
   let showDialog = false;
-  let adminMode = false;
-  let allowedUsers: { id: number; name: string }[] = [];
 
-  let newUserId = "";
-  let newUserName = "";
   let newProjectId = "";
   let newOwnerInitials = "";
 
@@ -25,62 +21,7 @@
       return;
     }
 
-    const found = allowedUsers.find(
-      (u) => u.id === parsedId && u.name.toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (!found) {
-      message = "❌ User not recognized. Please contact an admin.";
-      return;
-    }
-
-    if (parsedId === 1 && !adminMode) {
-      const token = prompt("Enter admin token:");
-      if (token === "supersecret") {
-        adminMode = true;
-        message = `✅ Logged in as ${name} (Admin ID: ${user_id})`;
-      } else {
-        message = "❌ Invalid admin token.";
-        return;
-      }
-    } else {
-      message = `✅ Logged in as ${name} (ID: ${user_id})`;
-    }
-  }
-
-  async function addUser() {
-    const id = parseInt(newUserId);
-    const trimmedName = newUserName.trim();
-
-    if (!trimmedName || isNaN(id)) {
-      message = "❌ Please enter a valid new user ID and name.";
-      return;
-    }
-
-    if (allowedUsers.some((u) => u.id === id)) {
-      message = "❌ That User ID is already taken.";
-      return;
-    }
-
-    allowedUsers.push({ id, name: trimmedName });
-    try {
-      const res = await fetch("http://localhost:8000/user/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name: trimmedName })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        message = `✅ ${data.message}`;
-      } else {
-        message = `❌ ${data.detail}`;
-      }
-    } catch {
-      message = "❌ Failed to sync user to backend.";
-    }
-
-    newUserId = "";
-    newUserName = "";
+    message = `✅ Logged in as ${name} (ID: ${user_id})`;
   }
 
   async function createProject() {
@@ -145,11 +86,6 @@
 
   onMount(() => {
     loadProjects();
-    allowedUsers = [
-      { id: 1, name: "Admin" },
-      { id: 2, name: "Alice" },
-      { id: 3, name: "Bob" }
-    ];
   });
 </script>
 
@@ -161,19 +97,9 @@
     {#if user_id && name}<p>👤 Current User: <strong>{name} (ID: {user_id})</strong></p>{/if}
   </div>
 
-  {#if adminMode}
-    <div class="admin-section">
-      <h3>🔐 Admin Panel — Create New User</h3>
-      <label>New User ID:<input type="number" bind:value={newUserId} /></label>
-      <label>New User Name:<input type="text" bind:value={newUserName} /></label>
-      <button on:click={addUser}>➕ Add User</button>
-    </div>
-  {/if}
-
   <div class="header-bar">
     <h1>TRACE System</h1>
     <div class="nav-buttons">
-      <a href="/"><button>🏠 Home</button></a>
       <a href="/database"><button>📊 Db Enumerator</button></a>
       <a href="/settings"><button>⚙️ Settings</button></a>
     </div>
