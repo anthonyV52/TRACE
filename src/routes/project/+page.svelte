@@ -206,6 +206,10 @@ function importProjects(event: Event) {
     </div>
   </div>
 
+  {#if message}
+  <div class="message">{message}</div>
+  {/if}
+
   <div class="projects-section">
     <h2>📁 Projects</h2>
     {#if projects.length === 0}
@@ -242,10 +246,6 @@ function importProjects(event: Event) {
     </div>
   </div>
   
-
-  {#if message}
-    <div class="message">{message}</div>
-  {/if}
 
   {#if showDialog}
     <div class="modal">

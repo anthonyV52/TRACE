@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from neo4j_service import create_user_node
+from services.neo4j_service import create_user_node
 
 router = APIRouter()
 
