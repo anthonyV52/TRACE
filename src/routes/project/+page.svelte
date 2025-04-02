@@ -8,9 +8,31 @@
   let message: string = "";
   let projects: { id: string; name: string; owner: string; isLocked: boolean; files: string[] }[] = [];
   let showDialog = false;
+  let adminMode = false;
+  let allowedUsers: { id: number; name: string }[] = [];
 
+  let newUserId = "";
+  let newUserName = "";
+
+  // Project Manager fields
   let newProjectId = "";
-  let newOwnerInitials = "";
+  let newProjectName = "";
+  let startDate = "";
+  let startTime = "";
+  let leadAnalyst = "";
+  let projectDescription = "";
+  let uploadedFiles: File[] = [];
+
+  function handleFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      uploadedFiles = Array.from(input.files);
+    }
+  }
+
+  function removeFile(index: number) {
+    uploadedFiles.splice(index, 1);
+  }
 
   function setUser() {
     const parsedId = parseInt(user_id);
@@ -21,73 +43,115 @@
       return;
     }
 
-    message = `✅ Logged in as ${name} (ID: ${user_id})`;
+    const found = allowedUsers.find(
+      (u) => u.id === parsedId && u.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (!found) {
+      message = "❌ User not recognized. Please contact an admin.";
+      return;
+    }
+
+    if (parsedId === 1 && !adminMode) {
+      const token = prompt("Enter admin token:");
+      if (token === "supersecret") {
+        adminMode = true;
+        message = `✅ Logged in as ${name} (Admin ID: ${user_id})`;
+      } else {
+        message = "❌ Invalid admin token.";
+        return;
+      }
+    } else {
+      message = `✅ Logged in as ${name} (ID: ${user_id})`;
+    }
+
   }
 
   async function createProject() {
-    const parsedId = parseInt(user_id);
-    if (!newProjectId.trim() || !name.trim() || !newOwnerInitials.trim()) {
-      message = "❌ Please enter all project details.";
+    if (!newProjectName || !startDate || !startTime || !leadAnalyst) {
+      message = "❌ Please fill all required fields.";
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:8000/project/create", {
+      const projectPayload = {
+        name: newProjectName,
+        owner: leadAnalyst,
+        dateRange: [startDate, startDate],
+        files: uploadedFiles.map((file) => file.name),
+        description: projectDescription,
+        IPList: [],
+        isLocked: false,
+        id: newProjectId || Math.random().toString(36).substring(2, 8)
+      };
+
+      const res = await fetch("http://localhost:8000/project/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: newProjectId.trim(),
-          name: name.trim(),
-          owner: newOwnerInitials.trim(),
-          isLocked: false,
-          files: [],
-          IPList: []
-        })
+        body: JSON.stringify(projectPayload)
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        message = `✅ ${result.message}`;
-        projects.push({ id: newProjectId, name, owner: newOwnerInitials, isLocked: false, files: [] });
+      const data = await res.json();
+      if (res.ok) {
+        message = `✅ ${data.message}`;
         showDialog = false;
-        name = "";
+        projects.push(projectPayload);
+        // Reset fields
         newProjectId = "";
-        newOwnerInitials = "";
+        newProjectName = "";
+        leadAnalyst = "";
+        projectDescription = "";
+        startDate = "";
+        startTime = "";
+        uploadedFiles = [];
       } else {
-        message = `❌ ${result.detail || 'Error creating project'}`;
+        message = `❌ ${data.detail || "Could not create project"}`;
       }
-    } catch {
-      message = `❌ Failed to connect to server.`;
+    } catch (err) {
+      message = "❌ Failed to connect to server.";
     }
-  }
-
-  async function openProject(project_id: string) {
-    const parsedId = parseInt(user_id);
-    if (!parsedId || isNaN(parsedId)) {
-      message = "❌ Please set a valid User ID before opening a project.";
-      return;
-    }
-
-    goto(`/project/${project_id}?requester_id=${parsedId}`);
   }
 
   async function loadProjects() {
     try {
       const response = await fetch("http://localhost:8000/project");
-      const result = await response.json();
-      if (Array.isArray(result)) {
-        projects = result;
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        projects = data;
       }
     } catch (err) {
-      console.error("Error fetching projects:", err);
+      console.error("Error loading projects:", err);
+    }
+  }
+
+  async function openProject(projectId: string) {
+    if (!user_id) {
+      message = "❌ Please log in first.";
+      return;
+    }
+    goto(`/project/${projectId}?requester_id=${user_id}`);
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await fetch("http://localhost:8000/users");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        allowedUsers = data;
+      } else {
+        console.warn("Unexpected user data", data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
     }
   }
 
   onMount(() => {
+    loadUsers();
     loadProjects();
   });
 </script>
+
 
 <div class="container">
   <div class="user-section">
@@ -169,19 +233,61 @@
     </label>
   </div>
 
-  {#if showDialog}
-    <div class="modal">
-      <div class="modal-content">
-        <h3>Create a New Project</h3>
-        <div class="form-container">
-          <label>Project ID:<input type="text" bind:value={newProjectId} /></label>
-          <label>Project Name:<input type="text" bind:value={name} /></label>
-          <label>Owner Initials:<input type="text" bind:value={newOwnerInitials} /></label>
-          <button on:click={createProject}>✅ Create</button>
-          <button on:click={() => showDialog = false}>❌ Cancel</button>
-          {#if message}<div class="message">{message}</div>{/if}
-        </div>
+  <!-- Modal UI -->
+{#if showDialog}
+<div class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3>Create Project</h3>
+      <button on:click={() => showDialog = false} style="font-size: 1.2rem;">✖</button>
+    </div>
+
+    <div class="form-container">
+      <label>
+        Project Name (required):
+        <input type="text" bind:value={newProjectName} placeholder="Project Name" required />
+      </label>
+
+      <label>
+        Start Date (required):
+        <input type="date" bind:value={startDate} required />
+      </label>
+
+      <label>
+        Start Time (required):
+        <input type="time" bind:value={startTime} required />
+      </label>
+
+      <label>
+        Lead Analyst Initials (required):
+        <input type="text" bind:value={leadAnalyst} placeholder="e.g. JD" required />
+      </label>
+
+      <label>
+        Project Description (optional):
+        <textarea bind:value={projectDescription} placeholder="Enter description..."></textarea>
+      </label>
+
+      <label>
+        File Upload (optional):
+        <input type="file" multiple on:change={handleFileUpload} />
+      </label>
+
+      {#if uploadedFiles.length > 0}
+        <ul>
+          {#each uploadedFiles as file, index}
+            <li>{file.name} <button on:click={() => removeFile(index)}>🗑️</button></li>
+          {/each}
+        </ul>
+      {/if}
+
+      <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
+        <button on:click={() => showDialog = false}>Cancel</button>
+        <button on:click={createProject}>Create</button>
       </div>
     </div>
-  {/if}
+  </div>
+</div>
+{/if}
+
 </div>

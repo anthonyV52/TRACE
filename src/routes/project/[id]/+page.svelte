@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { goto } from "$app/navigation";
     import { page } from "$app/stores";
   
     let projectId: string = "";
@@ -38,6 +39,10 @@
   }
 });
 
+function goBack() {
+  goto("/project");
+}
+
   </script>
   
   <style>
@@ -53,6 +58,8 @@
   
   <div class="project-container">
     <h1>📊 Project Dashboard</h1>
+    <button on:click={goBack} style="margin-bottom: 1rem;">⬅️ Back to Projects</button>
+
   
     {#if loading}
       <p>Loading project data...</p>
