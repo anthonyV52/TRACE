@@ -160,3 +160,20 @@ def get_all_users():
             }
             for record in result
         ]
+    
+def delete_project_node(project_id: str):
+    with driver.session() as session:
+        session.run("""
+            MATCH (p:Project {id: $id})
+            DETACH DELETE p
+        """, id=project_id)
+
+def user_owns_project(user_id: int, project_id: str) -> bool:
+    with driver.session() as session:
+        result = session.run("""
+            MATCH (u:User {id: $user_id})-[:OWNS]->(p:Project {id: $project_id})
+            RETURN COUNT(p) > 0 AS owns
+        """, user_id=user_id, project_id=project_id)
+        record = result.single()
+        return record and record["owns"]
+

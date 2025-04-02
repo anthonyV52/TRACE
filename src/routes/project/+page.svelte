@@ -165,7 +165,6 @@
     <h1>TRACE System</h1>
     <div class="nav-buttons">
       <a href="/database"><button>📊 Db Enumerator</button></a>
-      <a href="/settings"><button>⚙️ Settings</button></a>
       <a href="/sql-injection"><button>🧪 SQL Injection</button></a>
     </div>
   </div>
@@ -185,6 +184,12 @@
           </li>
         {/each}
       </ul>
+      <a href="/project-delete">
+        <button style="background-color: #dc2626; color: white; margin-top: 1rem;">
+          🗑️ Manage/Delete Projects
+        </button>
+      </a>
+      
     {/if}
   </div>
 

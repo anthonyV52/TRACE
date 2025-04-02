@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from models.ProjectManager import ProjectManager
-from typing import Optional, List, Tuple
+from typing import List, Tuple
+from services.neo4j_service import get_project_node, delete_project_node
 from neo4j_driver import get_driver
-
 
 router = APIRouter()
 
@@ -23,17 +23,26 @@ def load_project(name: str):
         raise HTTPException(status_code=404, detail="Project not found.")
     return project
 
-@router.delete("/project_manager/delete/{name}")
-def delete_project(name: str, requester: str):
-    project = project_store.get(name)
-    if not project:
+@router.delete("/project_manager/{project_id}/delete")
+def delete_project(project_id: str, requester_id: int = Query(...)):
+    try:
+        project = get_project_node(project_id)
+    except Exception:
         raise HTTPException(status_code=404, detail="Project not found.")
-    if project.locked:
-        raise HTTPException(status_code=403, detail="Project is locked.")
-    if project.owner != requester:
-        raise HTTPException(status_code=403, detail="Only the owner can delete the project.")
-    del project_store[name]
-    return {"success": True, "message": f"Project '{name}' deleted."}
+
+    if project["isLocked"]:
+        raise HTTPException(status_code=403, detail="Cannot delete a locked project.")
+
+    if requester_id != 1:  # Only Lead Analyst (ID 1) can delete
+        raise HTTPException(status_code=403, detail="Only Lead Analyst can delete projects.")
+
+    delete_project_node(project_id)
+
+    # Remove from in-memory store if exists
+    if project_id in project_store:
+        del project_store[project_id]
+
+    return {"message": f"Project {project_id} deleted successfully by Project Manager."}
 
 @router.post("/project_manager/lock/{name}")
 def lock_project(name: str, requester: str):
@@ -72,7 +81,6 @@ def read_ip_list(name: str):
         raise HTTPException(status_code=404, detail="Project not found.")
     return {"IPList": project.IPList}
 
-# "this is a test for the neo4j"
 @router.get("/neo4j/people")
 def get_people():
     driver = get_driver()
