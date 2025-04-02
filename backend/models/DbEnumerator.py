@@ -1,40 +1,59 @@
 from neo4j import GraphDatabase
+from typing import List, Dict
 
 class DBEnumerator:
     def __init__(self, driver):
         self.driver = driver
-        self.tableNames = []
-        self.columnNames = {}
-        self.table = {}
+        self.tables = []
+        self.columns = {}
+        self.results = {}
 
     def enumerate_database(self):
         with self.driver.session() as session:
-            # Get all labels (table names)
-            result = session.run("CALL db.labels()")
-            self.tableNames = [record["label"] for record in result]
+            try:
+                # Fetch all the table names (labels in Neo4j)
+                result = session.run("CALL db.labels()")
+                self.tables = [record["label"] for record in result]
+                print(f"Tables found: {self.tables}")  # Debugging output
 
-            for label in self.tableNames:
-                # Get column names
-                props_result = session.run(f"""
-                    MATCH (n:{label})
-                    RETURN keys(n) AS props
-                    LIMIT 1
-                """)
-                props = props_result.single()
-                if props:
-                    self.columnNames[label] = props["props"]
+                # Fetch columns (properties) for each table (node label)
+                for table in self.tables:
+                    result = session.run(f"MATCH (n:{table}) RETURN keys(n) LIMIT 1")
+                    columns = []
+                    for record in result:
+                        columns = record["keys(n)"]  # The properties (columns) for the table
+                    self.columns[table] = columns
+                    print(f"Columns for {table}: {self.columns[table]}")  # Debugging output
 
-                # Get sample rows
-                data_result = session.run(f"""
-                    MATCH (n:{label})
-                    RETURN properties(n) AS row
-                    LIMIT 25
-                """)
-                self.table[label] = [record["row"] for record in data_result]
+                # Fetch data for each table
+                for table in self.tables:
+                    result = session.run(f"MATCH (n:{table}) RETURN n LIMIT 10")  # Fetch data for each table (node)
+                    table_data = []
+                    for record in result:
+                        node = record["n"]
+                        node_data = {
+                            "identity": node.id,  # Use 'id' instead of 'identity'
+                            "labels": node.labels,
+                            "properties": dict(node.items()),  # Convert properties to a dict
+                            "elementId": str(node.id)  # Convert 'id' to a string for elementId
+                        }
+
+                        # Exclude unwanted properties (like 'name' and 'age' for Person)
+                        if table == "Person":
+                            node_data["properties"] = {key: value for key, value in node_data["properties"].items() if key not in ["name", "age"]}
+                            # Remove table from results if properties are empty
+                            if not node_data["properties"]:
+                                continue
+
+                        print(f"Data for {table}: {node_data}")  # Debugging output
+                        table_data.append(node_data)
+                    self.results[table] = table_data
+            except Exception as e:
+                print(f"Error during enumeration: {e}")
 
     def get_summary(self):
         return {
-            "tableNames": self.tableNames,
-            "columnNames": self.columnNames,
-            "table": self.table
+            "tableNames": self.tables,
+            "columnNames": self.columns,
+            "table": self.results
         }
