@@ -1,6 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, UploadFile, File, Depends, Query
 from pydantic import BaseModel
-from neo4j_service import create_project_node, create_user_node, link_owner_to_project
+from backend.services.neo4j_service import create_project_node, create_user_node, link_owner_to_project
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
