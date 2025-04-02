@@ -31,6 +31,11 @@ def create_user_node(user_id: int, name: str):
     with driver.session() as session:
         session.run("MERGE (u:User {id: $id}) SET u.name = $name", id=user_id, name=name)
 
+def verify_user(user_id: int, name: str):
+    with driver.session() as session:
+        result = session.run("MATCH (u:User {id: $id, name: $name}) RETURN u", id=user_id, name=name)
+        return result.single() is not None
+
 def create_project_node(project: Project):
     with driver.session() as session:
         session.run("""
@@ -83,10 +88,21 @@ def update_project_lock(project_id: int, lock: bool):
     with driver.session() as session:
         session.run("MATCH (p:Project {id: $id}) SET p.locked = $locked", id=project_id, locked=lock)
 
-def  link_user_access_to_project(user_id: int, project_id: int):
+def link_user_access_to_project(user_id: int, project_id: int):
     with driver.session() as session:
         session.run("""
             MERGE (u:User {id: $user_id})
             MERGE (p:Project {id: $project_id})
             MERGE (u)-[:ACCESSED]->(p)
         """, user_id=user_id, project_id=project_id)
+
+def get_all_users():
+    with driver.session() as session:
+        result = session.run("MATCH (u:User) RETURN u")
+        return [
+            {
+                "id": record["u"]["id"],
+                "name": record["u"]["name"]
+            }
+            for record in result
+        ]
