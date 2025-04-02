@@ -2,6 +2,7 @@ from neo4j import GraphDatabase
 from pydantic import BaseModel
 from typing import List, Tuple, Optional
 from datetime import date
+import json
 
 # Config (replace if you're using env variables or a config file)
 NEO4J_URI = "bolt://localhost:7687"
@@ -28,17 +29,23 @@ class ProjectManager(BaseModel):
 def get_all_projects():
     with driver.session() as session:
         result = session.run("MATCH (p:Project) RETURN p")
-        return [
-            {
-                "id": record["p"]["id"],
-                "name": record["p"]["name"],
-                "owner": record["p"]["owner"],
-                "isLocked": record["p"].get("isLocked", False),
-                "files": record["p"].get("files", []),
-                "IPList": record["p"].get("IPList", [])
-            }
-            for record in result
-        ]
+        projects = []
+        for record in result:
+            node = record["p"]
+            iplist_raw = node.get("IPList", "[]")
+            try:
+                iplist = json.loads(iplist_raw) if isinstance(iplist_raw, str) else iplist_raw
+            except Exception:
+                iplist = []
+            projects.append({
+                "id": node["id"],
+                "name": node["name"],
+                "owner": node["owner"],
+                "isLocked": node.get("isLocked", False),
+                "files": node.get("files", []),
+                "IPList": iplist
+            })
+        return projects
 
 def create_user_node(user_id: int, name: str):
     with driver.session() as session:
@@ -51,15 +58,23 @@ def verify_user(user_id: int, name: str):
 
 def create_project_node(project: Project):
     with driver.session() as session:
+        # Convert IPList from tuples to lists, then JSON stringify
+        json_iplist = json.dumps([list(item) for item in project.IPList])
+        
         session.run("""
             MERGE (p:Project {id: $id})
             SET p.name = $name,
                 p.owner = $owner,
                 p.isLocked = $isLocked,
                 p.files = $files,
-                p.IPList = $IPList
-        """, id=project.id, name=project.name, owner=project.owner,
-             isLocked=project.isLocked, files=project.files, IPList=str(project.IPList))
+                p.IPList = $iplist
+        """, 
+        id=project.id,
+        name=project.name,
+        owner=project.owner,
+        isLocked=project.isLocked,
+        files=project.files,
+        iplist=json_iplist)
 
 def create_project_manager_node(pm: ProjectManager):
     with driver.session() as session:
@@ -71,7 +86,7 @@ def create_project_manager_node(pm: ProjectManager):
                 pm.locked = $locked
         """, name=pm.name,
              owner=pm.owner,
-             IPList=str(pm.IPList),
+             IPList=json.dumps(pm.IPList),
              dateRange=str(pm.dateRange),
              locked=pm.locked)
 
@@ -89,13 +104,18 @@ def get_project_node(project_id: str):
         if not record:
             raise Exception("Project not found")
         node = record["p"]
+        iplist_raw = node.get("IPList", "[]")
+        try:
+            iplist = json.loads(iplist_raw) if isinstance(iplist_raw, str) else iplist_raw
+        except Exception:
+            iplist = []
         return {
             "id": node["id"],
             "name": node["name"],
             "owner": node["owner"],
-            "isLocked": node["isLocked"],
+            "isLocked": node.get("isLocked", False),
             "files": node.get("files", []),
-            "IPList": node.get("IPList", [])
+            "IPList": iplist
         }
 
 def get_project_owner_node(project_id: str):

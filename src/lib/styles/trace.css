@@ -145,3 +145,59 @@ body {
     gap: 1rem;
   }
   
+  .container {
+    padding: 2rem;
+    font-family: 'Segoe UI', sans-serif;
+    color: #1f2937;
+  }
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .recent-projects {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .project-card {
+    background: #f3f4f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .tabs {
+    margin-top: 2rem;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    gap: 2rem;
+  }
+  .tab-active {
+    border-bottom: 2px solid #3b82f6;
+    font-weight: bold;
+    padding-bottom: 0.5rem;
+  }
+  .projects-table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+  }
+  .projects-table th,
+  .projects-table td {
+    padding: 1rem;
+    text-align: left;
+  }
+  .projects-table tr:nth-child(odd) {
+    background-color: #f9fafb;
+  }
+  .run-btn {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+  .project-options {
+    position: relative;
+  }
