@@ -174,7 +174,7 @@
     <h1>TRACE System</h1>
     <div class="nav-buttons">
       <a href="/"><button>🏠 Home</button></a>
-      <a href="/database"><button>📊 Db Enumerator</button></a>
+      <a href="/dbEnumerator"><button>📊 Db Enumerator</button></a>
       <a href="/settings"><button>⚙️ Settings</button></a>
     </div>
   </div>

@@ -29,6 +29,7 @@
 	},
 	"dependencies": {
 		"cors": "^2.8.5",
-		"neo4j-driver": "^5.28.1"
+		"neo4j-driver": "^5.28.1",
+		"svelte-routing": "^2.13.0"
 	}
 }
