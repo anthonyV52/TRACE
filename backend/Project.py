@@ -28,6 +28,14 @@ class Project(BaseModel):
     owner_id: int
     locked: bool = False
 
+class ProjectImportSchema(BaseModel):
+    id: int
+    name: str
+    owner_id: int
+    locked: bool
+    files: list[str]
+    ip_list: list[list[str]]
+
 # Mock database
 projects_db = {}
 users_db = {}
@@ -136,7 +144,7 @@ def set_project_lock(project_id: int, lock: bool, requester_id: int):
 
 # IMPORT project
 @app.post("/projects/import")
-def import_project(requester_id: int = Query(..., description="User ID of requester")):
+def import_project(project: ProjectImportSchema, requester_id: int = Query(..., description="User ID of requester")):
     return {"message": f"Importing project by user {requester_id}"}
 
 # EXPORT project
