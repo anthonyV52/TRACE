@@ -1,90 +1,75 @@
-from fastapi import APIRouter, HTTPException, Query
-from models.Project import Project, ProjectCreateRequest
-from services.neo4j_service import (
-    create_project_node, create_user_node, link_owner_to_project,
-    get_project_node, get_project_owner_node, link_user_access_to_project,
-    update_project_owner, update_project_id, update_project_lock,
-    get_all_projects
-)
+from fastapi import APIRouter, HTTPException
+from models.Project import Project
+from services.neo4j_service import create_project_node, get_all_projects  # Added get_all_projects
+from typing import List, Tuple
 
-router = APIRouter(prefix="/project", tags=["Project"])
+router = APIRouter()
 
-@router.get("")
-def list_projects():
-    return get_all_projects()
+# In-memory storage for projects (optional backup)
+project_db: dict[str, Project] = {}
 
-@router.post("/create")
-def create_project(request: ProjectCreateRequest):
-    if request.owner_id != 1:
-        raise HTTPException(status_code=403, detail="Only Lead Analyst can create projects")
+@router.get("/project")
+def get_all_projects_route():
+    return get_all_projects()  # Now pulls from Neo4j
 
-    new_project_id = request.owner_id * 1000 + len(request.name)
-    project = Project(id=new_project_id, name=request.name, owner_id=request.owner_id)
-    create_user_node(project.owner_id, f"User{project.owner_id}")
-    create_project_node(project)
-    link_owner_to_project(project.owner_id, project.id)
-    return {"message": "Project created and synced to Neo4j", "project_id": project.id}
+@router.post("/project/create")
+def create_project(project: Project):
+    if project.id in project_db:
+        raise HTTPException(status_code=400, detail="Project ID already exists.")
+    project_db[project.id] = project
+    create_project_node(project)  # Sync to Neo4j
+    return {"success": True, "message": f"Project '{project.name}' created."}
 
-@router.get("/{project_id}")
-def get_full_project(project_id: int, requester_id: int = Query(...)):
-    project = get_project_node(project_id)
-    owner = get_project_owner_node(project_id)
+@router.get("/project/{project_id}")
+def get_project(project_id: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
 
-    # Log access for non-owners
-    if requester_id != project["owner_id"]:
-        link_user_access_to_project(requester_id, project_id)
+@router.put("/project/{project_id}/name")
+def update_project_name(project_id: str, new_name: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    result = project.set_project_name(new_name)
+    return {"success": result}
 
-    return {
-        "project": project,
-        "owner": owner
-    }
+@router.put("/project/{project_id}/owner")
+def set_owner(project_id: str, initials: str, owner_id: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project.set_owner(initials, owner_id)
+    return {"success": True}
 
-@router.get("/{project_id}/name")
-def get_name(project_id: int):
-    return {"project_name": get_project_node(project_id)["name"]}
+@router.put("/project/{project_id}/lock")
+def lock_project(project_id: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project.lock()
+    return {"locked": True}
 
-@router.get("/{project_id}/owner")
-def get_owner(project_id: int):
-    return {"owner": get_project_owner_node(project_id)}
+@router.put("/project/{project_id}/unlock")
+def unlock_project(project_id: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project.unlock()
+    return {"locked": False}
 
-@router.get("/{project_id}/id")
-def get_id(project_id: int):
-    return {"project_id": get_project_node(project_id)["id"]}
+@router.post("/project/{project_id}/iplist")
+def import_ip_list(project_id: str, ip_list: List[Tuple[str, int]]):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project.import_ip_list(ip_list)
+    return {"success": True, "message": "IP list updated."}
 
-@router.get("/{project_id}/locked")
-def get_locked(project_id: int):
-    return {"locked": get_project_node(project_id)["locked"]}
-
-@router.post("/{project_id}/set_owner")
-def set_owner(project_id: int, new_owner_id: int, requester_id: int):
-    update_project_owner(project_id, new_owner_id)
-    return {"message": f"Owner changed to {new_owner_id}"}
-
-@router.post("/{project_id}/set_id")
-def set_id(project_id: int, new_id: int, requester_id: int):
-    update_project_id(project_id, new_id)
-    return {"message": f"Project ID changed to {new_id}"}
-
-@router.post("/{project_id}/set_lock")
-def set_lock(project_id: int, lock: bool, requester_id: int):
-    update_project_lock(project_id, lock)
-    return {"message": f"Project lock status changed to {lock}"}
-
-@router.post("/import")
-def import_project(requester_id: int = Query(..., description="User ID of requester")):
-    return {"message": f"Importing project by user {requester_id}"}
-
-@router.get("/{project_id}/export")
-def export_project(project_id: int, format: str, requester_id: int):
-    if format not in ["XML", "CSV"]:
-        raise HTTPException(status_code=400, detail="Invalid format")
-
-    project = get_project_node(project_id)
-    file_path = f"exports/project_{project_id}.{format.lower()}"
-    import os
-    os.makedirs("exports", exist_ok=True)
-
-    with open(file_path, "w") as file:
-        file.write(f"Exported project {project_id} in {format} format.")
-
-    return {"message": "Project exported successfully", "file_path": file_path}
+@router.get("/project/{project_id}/save")
+def save_project(project_id: str):
+    project = project_db.get(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project.save_project()
