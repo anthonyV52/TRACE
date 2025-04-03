@@ -3,8 +3,14 @@ from models.ProjectManager import ProjectManager
 from typing import List, Tuple
 from services.neo4j_service import get_project_node, delete_project_node, user_owns_project, update_project_lock,get_project_node
 from neo4j_driver import get_driver
+from pydantic import BaseModel
+
+
 
 router = APIRouter()
+
+class LockToggleRequest(BaseModel):
+    lock: bool
 
 # Temporary in-memory project store
 project_store: dict[str, ProjectManager] = {}
@@ -23,49 +29,23 @@ def load_project(name: str):
         raise HTTPException(status_code=404, detail="Project not found.")
     return project
 
-@router.delete("/project_manager/{project_id}/delete")
-def delete_project(project_id: str, requester_id: int = Query(...)):
-    try:
-        project = get_project_node(project_id)
-    except Exception:
-        raise HTTPException(status_code=404, detail="Project not found.")
-
-    if project["isLocked"]:
-        raise HTTPException(status_code=403, detail="Cannot delete a locked project.")
-
-    if requester_id != 1:  # Only Lead Analyst (ID 1) can delete
-        raise HTTPException(status_code=403, detail="Only Lead Analyst can delete projects.")
-
-    delete_project_node(project_id)
-
-    # Remove from in-memory store if exists
-    if project_id in project_store:
-        del project_store[project_id]
-
-    return {"message": f"Project {project_id} deleted successfully by Project Manager."}
-
 @router.post("/project/{project_id}/lock")
-def lock_project(project_id: str, requester_id: int = Query(...)):
-    # Make sure project exists
-    try:
-        project = get_project_node(project_id)
-    except Exception:
-        raise HTTPException(status_code=404, detail="Project not found.")
-
-    # Ensure requester owns the project
+def toggle_project_lock(project_id: str, data: LockToggleRequest, requester_id: int = Query(...)):
+    project = get_project_node(project_id)
+    
     if not user_owns_project(requester_id, project_id):
-        raise HTTPException(status_code=403, detail="Only the owner can lock this project.")
+        raise HTTPException(status_code=403, detail="Only the owner can modify lock state.")
 
-    # Set locked = True
-    update_project_lock(project_id, True)
-    return {"message": f"Project '{project_id}' is now locked."}
+    update_project_lock(project_id, data.lock)
+
+    return {"message": f"Project '{project_id}' is now {'locked' if data.lock else 'unlocked'}."}
 
 @router.get("/project_manager/export/{name}")
 def export_project(name: str):
     project = project_store.get(name)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
-    return project.dict()
+    return project.model_dump()
 
 @router.post("/project_manager/import")
 def import_project(pm: ProjectManager):

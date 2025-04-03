@@ -140,7 +140,10 @@ def update_project_id(old_id: str, new_id: str):
 
 def update_project_lock(project_id: str, lock: bool):
     with driver.session() as session:
-        session.run("MATCH (p:Project {id: $id}) SET p.isLocked = $locked", id=project_id, locked=lock)
+        session.run("""
+            MATCH (p:Project {id: $id})
+            SET p.isLocked = $locked
+        """, id=project_id, locked=lock)
 
 def link_user_access_to_project(user_id: int, project_id: str):
     with driver.session() as session:

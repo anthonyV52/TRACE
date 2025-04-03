@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import "$lib/styles/trace.css";
   import { goto } from "$app/navigation";
+  import { currentUser } from "$lib/stores/user";
 
   let name: string = "";
   let user_id: string = "";
@@ -43,28 +44,9 @@
       return;
     }
 
-    const found = allowedUsers.find(
-      (u) => u.id === parsedId && u.name.toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (!found) {
-      message = "❌ User not recognized. Please contact an admin.";
-      return;
-    }
-
-    if (parsedId === 1 && !adminMode) {
-      const token = prompt("Enter admin token:");
-      if (token === "supersecret") {
-        adminMode = true;
-        message = `✅ Logged in as ${name} (Admin ID: ${user_id})`;
-      } else {
-        message = "❌ Invalid admin token.";
-        return;
-      }
-    } else {
-      message = `✅ Logged in as ${name} (ID: ${user_id})`;
-    }
-
+    // Verify user exists here (if you do that)
+    currentUser.set({ id: parsedId, name: trimmedName });
+    message = `✅ Logged in as ${trimmedName} (ID: ${parsedId})`;
   }
 
   async function createProject() {
@@ -160,6 +142,10 @@
     <button on:click={setUser}>Set User</button>
     {#if user_id && name}<p>👤 Current User: <strong>{name} (ID: {user_id})</strong></p>{/if}
   </div>
+
+  {#if $currentUser}
+    <p>Welcome back, {$currentUser.name, $currentUser.id}!</p>
+  {/if}
 
   <div class="header-bar">
     <h1>TRACE System</h1>
