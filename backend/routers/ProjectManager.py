@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from models.ProjectManager import ProjectManager
 from typing import List, Tuple
-from services.neo4j_service import get_project_node, delete_project_node
+from services.neo4j_service import get_project_node, delete_project_node, user_owns_project, update_project_lock,get_project_node
 from neo4j_driver import get_driver
 
 router = APIRouter()
@@ -44,15 +44,21 @@ def delete_project(project_id: str, requester_id: int = Query(...)):
 
     return {"message": f"Project {project_id} deleted successfully by Project Manager."}
 
-@router.post("/project_manager/lock/{name}")
-def lock_project(name: str, requester: str):
-    project = project_store.get(name)
-    if not project:
+@router.post("/project/{project_id}/lock")
+def lock_project(project_id: str, requester_id: int = Query(...)):
+    # Make sure project exists
+    try:
+        project = get_project_node(project_id)
+    except Exception:
         raise HTTPException(status_code=404, detail="Project not found.")
-    if project.owner != requester:
-        raise HTTPException(status_code=403, detail="Only the owner can lock the project.")
-    project.locked = True
-    return {"success": True, "message": f"Project '{name}' locked."}
+
+    # Ensure requester owns the project
+    if not user_owns_project(requester_id, project_id):
+        raise HTTPException(status_code=403, detail="Only the owner can lock this project.")
+
+    # Set locked = True
+    update_project_lock(project_id, True)
+    return {"message": f"Project '{project_id}' is now locked."}
 
 @router.get("/project_manager/export/{name}")
 def export_project(name: str):
