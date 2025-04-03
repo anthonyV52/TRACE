@@ -164,7 +164,7 @@
   <div class="header-bar">
     <h1>TRACE System</h1>
     <div class="nav-buttons">
-      <a href="/database"><button>📊 Db Enumerator</button></a>
+      <a href="/dbEnumerator"><button>📊 Db Enumerator</button></a>
       <a href="/sql-injection"><button>🧪 SQL Injection</button></a>
     </div>
   </div>
