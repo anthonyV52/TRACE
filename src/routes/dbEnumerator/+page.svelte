@@ -1,20 +1,24 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  let tables = [];
-  let columnNames = {};
+  let projects = [];
   let tableData = {};
+  let searchQuery = "";
 
-  // Fetch table names and columns from the backend
   async function fetchDatabaseInfo() {
     try {
       const response = await fetch("http://localhost:8000/enumerate-db");
       const data = await response.json();
-      tables = data.tableNames;
-      columnNames = data.columnNames;
-      tableData = data.table;
+      tableData = data.table; // Table data from the backend
     } catch (err) {
       console.error("Error fetching database information:", err);
     }
+  }
+
+  function searchProjects() {
+    // Filter the projects based on the search query
+    projects = Object.values(tableData.Project).flat().filter((project: any) => 
+      project.properties.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   }
 
   onMount(() => {
@@ -26,47 +30,86 @@
   <h1>Database Enumeration</h1>
   <button on:click={fetchDatabaseInfo}>Refresh Tables</button>
 
+  <!-- Projects Section -->
   <div class="section">
-    <h2>Tables:</h2>
-    <div class="table">
-      {#each tables as table}
-        <ul class="table-list">
+    <h2>Projects:</h2>
+
+    <!-- Search bar for projects -->
+    <input 
+      type="text" 
+      placeholder="Search for a project..." 
+      bind:value={searchQuery} 
+      on:input={searchProjects}
+      class="search-bar"
+    />
+
+    <!-- Scrollable projects list -->
+    <div class="projects-list">
+      {#each projects as project}
+        <div class="project-item">
+          <strong>{project.properties.name}</strong><br />
+          <span>Owner: {project.properties.owner}</span><br />
+          <span>Locked: {project.properties.isLocked ? "🔒" : "🔓"}</span><br />
+          <span>ID: {project.properties.id}</span><br />
+          <span>IP List: {project.properties.IPList.join(", ")}</span><br />
+          <span>Files: {project.properties.files.join(", ")}</span><br />
+        </div>
+      {/each}
+    </div>
+  </div>
+
+  <!-- Table Data Section (only if needed) -->
+  <div class="section" style="display: none;"> <!-- Hide this section for now -->
+    <h2>Table Data:</h2>
+    <div class="tableData">
+      {#each Object.keys(tableData) as table}
+        <ul>
           <li><strong>{table}</strong></li>
-          {#each columnNames[table] as column}
-            <li class="column-item">{column}</li>
+          {#each tableData[table] as row}
+            <li>{JSON.stringify(row)}</li>
           {/each}
         </ul>
       {/each}
     </div>
   </div>
-
-  <div class="section">
-    <h2>Table Data:</h2>
-    <div class="tableData">
-      {#each Object.keys(tableData) as table}
-        <div class="table">
-          <h3>{table} Data:</h3>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each tableData[table] as row}
-                <tr>
-                  {#each Object.entries(row.properties) as [key, value]}
-                    <td class="data-cell">
-                      <strong>{key}:</strong> {Array.isArray(value) ? value.join(', ') : value}
-                    </td>
-                  {/each}
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/each}
-    </div>
-  </div>
 </div>
+
+<!-- Add some basic styling here for your search bar and layout -->
+<style>
+  .container {
+    padding: 20px;
+  }
+
+  .search-bar {
+    padding: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+    font-size: 16px;
+  }
+
+  .projects-list {
+    max-height: 400px; /* Limit height for scrolling */
+    overflow-y: auto;  /* Enable vertical scrolling */
+    padding-right: 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+  }
+
+  .project-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .project-item:last-child {
+    border-bottom: none;
+  }
+
+  .section {
+    margin-bottom: 30px;
+  }
+
+  h1, h2 {
+    font-family: 'Arial', sans-serif;
+    color: #333;
+  }
+</style>
