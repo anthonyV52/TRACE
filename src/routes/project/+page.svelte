@@ -135,12 +135,12 @@
 </script>
 
 
-<div class="container">
+<div>
   <div class="user-section">
     <label>User ID:<input type="number" bind:value={user_id} /></label>
-    <label>Name:<input type="text" bind:value={name} /></label>
+    <label>Name:<input type="text" bind:value={name} /></label><br><br>
     <button on:click={setUser}>Set User</button>
-    {#if user_id && name}<p>👤 Current User: <strong>{name} (ID: {user_id})</strong></p>{/if}
+    {#if user_id && name}<p>Current User: <strong>{name} (ID: {user_id})</strong></p>{/if}
   </div>
 
   {#if $currentUser}
@@ -150,89 +150,101 @@
   <div class="header-bar">
     <h1>TRACE System</h1>
     <div class="nav-buttons">
-      <a href="/dbEnumerator"><button>📊 Db Enumerator</button></a>
-      <a href="/sql-injection"><button>🧪 SQL Injection</button></a>
+      <a href="/dbEnumerator"><button>Database Enumerator</button></a>
+      <a href="/sql-injection"><button>SQL Injection</button></a><br><br>
+
+      <button on:click={() => showDialog = true}>+ Create Project</button>
+      
+      <button on:click={() => {
+        const dataStr = JSON.stringify(projects, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "projects.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }}>Download JSON</button>
+
+      <label class="file-upload-label">
+        Choose JSON File
+        <input type="file" accept="application/json" on:change={(e) => {
+          const input = e.target as HTMLInputElement;
+          const file = input.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const importedData = JSON.parse(e.target?.result as string);
+
+              const isValid = (typeof importedData.name === "string" &&
+                              typeof importedData.id === "string" &&
+                              typeof importedData.owner === "string" &&
+                              typeof importedData.isLocked === "boolean" &&
+                              Array.isArray(importedData.files) &&
+                              importedData.IPList.every((ip: string | any[]) => Array.isArray(ip) && ip.length === 2 && 
+                              typeof ip[0] === "string" && typeof ip[1] === "number")
+              )
+
+              if (isValid) {
+                projects = importedData;
+                message = "Projects imported successfully!";
+              } else {
+                message = "Invalid file format.";
+              }
+            } catch {
+              message = "Failed to parse JSON.";
+            }
+          };
+          reader.readAsText(file);
+        }} />
+      </label>
     </div>
   </div>
 
   {#if message}<div class="message">{message}</div>{/if}
 
-  <div class="projects-section">
-    <h2>📁 Projects</h2>
-    {#if projects.length === 0}
-      <p>No projects yet.</p>
-    {:else}
-      <ul>
-        {#each projects as project}
-          <li>
-            <strong>{project.name}</strong> — ID: {project.id}, Owner: {project.owner}, Locked: {project.isLocked ? "🔒" : "🔓"}
-            <button on:click={() => openProject(project.id)}>Open</button>
-          </li>
+  <div class="all-projects">
+    <h2>Projects</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Project ID</th>
+          <!-- <th>Last Edit</th> -->
+          <th>Lead Analyst</th>
+          <th>Locked Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#if projects.length === 0}
+          <tr>
+            <td>N/A</td>
+            <td>N/A</td>
+            <!-- <td>{project.lastEdit}</td> -->
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        {:else}
+          {#each projects as project}
+          <tr>
+            <td>{project.name}</td>
+            <td>{project.id}</td>
+            <!-- <td>{project.lastEdit}</td> -->
+            <td>{project.owner}</td>
+            <td>{project.isLocked ? "Locked" : "Unlocked"}</td>
+          </tr>
         {/each}
-      </ul>
-      <a href="/project-delete">
-        <button style="background-color: #dc2626; color: white; margin-top: 1rem;">
-          🗑️ Manage/Delete Projects
-        </button>
-      </a>
+
+        <a href="/project-delete">
+          <button style="background-color: #dc2626; color: white; margin-top: 1rem;">
+            Manage/Delete Projects
+          </button>
+        </a>
       
-    {/if}
-  </div>
-
-  <div class="create-section">
-    <h2>➕ Create New Project</h2>
-    <button on:click={() => showDialog = true}>Create Project</button>
-  </div>
-
-  <div class="export-section">
-    <h2>⬇️ Export Projects</h2>
-    <button on:click={() => {
-      const dataStr = JSON.stringify(projects, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "projects.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    }}>Download JSON</button>
-  </div>
-
-  <div class="import-section">
-    <h2>⬆️ Import Projects</h2>
-    <label class="file-upload-label">
-      Choose JSON File
-      <input type="file" accept="application/json" on:change={(e) => {
-        const input = e.target as HTMLInputElement;
-        const file = input.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const importedData = JSON.parse(e.target?.result as string);
-
-            const isValid = (typeof importedData.name === "string" &&
-                             typeof importedData.id === "string" &&
-                             typeof importedData.owner === "string" &&
-                             typeof importedData.isLocked === "boolean" &&
-                             Array.isArray(importedData.files) &&
-                             importedData.IPList.every(ip => Array.isArray(ip) && ip.length === 2 && 
-                             typeof ip[0] === "string" && typeof ip[1] === "number")
-            )
-
-            if (isValid) {
-              projects = importedData;
-              message = "✅ Projects imported successfully!";
-            } else {
-              message = "❌ Invalid file format.";
-            }
-          } catch {
-            message = "❌ Failed to parse JSON.";
-          }
-        };
-        reader.readAsText(file);
-      }} />
-    </label>
+        {/if}
+      </tbody>
+    </table>
   </div>
 
   <!-- Modal UI -->
